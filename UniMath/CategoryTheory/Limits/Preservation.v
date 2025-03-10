@@ -161,6 +161,14 @@ Definition preserves_chosen_terminal_eq
   : UU
   := ∥ F T₁ = T₂ ∥.
 
+Proposition identity_preserves_chosen_terminal
+            {C : category}
+            (T : Terminal C)
+  : preserves_chosen_terminal T (functor_identity C).
+Proof.
+  intro ; apply T.
+Qed.
+
 Proposition identity_preserves_chosen_terminal_eq
             {C : category}
             (T : Terminal C)

@@ -5,12 +5,14 @@ Definition natural number objects (NNO's)
 This is related to the initial algebra definition in FunctorAlgebras.v
 
 Written by: Anders Mörtberg, 2018
+Extended by: Kobe Wullaert, 2025
 
 *)
 Require Import UniMath.MoreFoundations.All.
 
 Require Import UniMath.CategoryTheory.Core.Prelude.
 Require Import UniMath.CategoryTheory.Limits.Terminal.
+Require Import UniMath.CategoryTheory.Limits.Preservation.
 
 Local Open Scope cat.
 
@@ -80,6 +82,20 @@ Section UniversalMappingProperty.
                 (f ,, fz ,, fs)
                 (g ,, gz ,, gs))).
   Qed.
+
+  Corollary NNO_mor_unique'
+    {f : N --> x}
+    (fz : zeroNNO N · f = z)
+    (fs : sucNNO N · f = f · s)
+    : f = NNO_mor.
+  Proof.
+    use NNO_mor_unique.
+    - exact fz.
+    - exact NNO_mor_Z.
+    - exact fs.
+    - exact NNO_mor_S.
+  Qed.
+
 End UniversalMappingProperty.
 
 Definition make_NNO (n : C) (z : C ⟦ 1, n ⟧) (s : C ⟦ n, n ⟧)
@@ -136,3 +152,92 @@ Section UniqueUpToIso.
         (split ; apply mor_between_NNO_inv).
   Defined.
 End UniqueUpToIso.
+
+Section UniqueUpToIsoModChosenTerminal.
+
+  Lemma terminal_arrow_from_itself {C : category} (T : Terminal C)
+    : TerminalArrow T T = identity T.
+  Proof.
+    apply pathsinv0, TerminalArrowUnique.
+  Qed.
+
+  Lemma is_between_NNO_mod_chosen_terminal_is_inverse
+    {C : category} {T T' : Terminal C}
+    (N : NNO T) (N' : NNO T')
+    : NNO_mor T N (z_iso_Terminals T T' · zeroNNO T' N') (sucNNO T' N')
+        · NNO_mor T' N' (z_iso_Terminals T' T · zeroNNO T N) (sucNNO T N) = identity N.
+  Proof.
+    use NNO_mor_unique.
+    - apply N.
+    - apply N.
+    - cbn.
+      rewrite assoc.
+      rewrite NNO_mor_Z.
+      rewrite assoc'.
+      rewrite NNO_mor_Z.
+      rewrite assoc.
+      etrans. {
+        apply maponpaths_2, TerminalArrowUnique.
+      }
+      etrans. {
+        apply maponpaths_2, terminal_arrow_from_itself.
+      }
+      apply id_left.
+    - apply id_right.
+    - cbn.
+      rewrite assoc.
+      rewrite NNO_mor_S.
+      rewrite assoc'.
+      rewrite NNO_mor_S.
+      now rewrite assoc.
+    - exact (id_right _ @ ! id_left _).
+  Qed.
+
+  Lemma iso_between_NNO_mod_chosen_terminal
+    {C : category} {T T' : Terminal C}
+    (N : NNO T) (N' : NNO T')
+    : z_iso N N'.
+  Proof.
+    set (iT := z_iso_Terminals T T').
+
+    use make_z_iso.
+    - use NNO_mor.
+      + exact (iT · zeroNNO _ N').
+      + exact (sucNNO _ N').
+    - use NNO_mor.
+      + exact (z_iso_inv iT · zeroNNO _ N).
+      + exact (sucNNO _ N).
+    - split ; apply is_between_NNO_mod_chosen_terminal_is_inverse.
+  Defined.
+
+End UniqueUpToIsoModChosenTerminal.
+
+Section HomomorphismOfNNOs.
+
+  (* Image of NNO is again an NNO *)
+  Definition creates_NNO
+    {C D : category} {F : functor C D}
+    {T_C : Terminal C}
+    (F_pT : preserves_chosen_terminal T_C F)
+    (N : NNO T_C) : UU
+    := isNNO (make_Terminal _ F_pT) (F N) (#F (zeroNNO _ N)) (#F (sucNNO _ N)).
+
+  Definition NNO_from_functor_creation
+    {C D : category} {F : functor C D}
+    {T_C : Terminal C}
+    {F_pT : preserves_chosen_terminal T_C F}
+    {N : NNO T_C}
+    (F_cN : creates_NNO F_pT N)
+    : NNO (make_Terminal _ F_pT)
+    := make_NNO _ _ _ _ F_cN.
+
+  (* The unique morphism out of an NNO in the codomain, to the image of the NNO in the domain is an iso *)
+  Definition preserves_NNO
+    {C D : category} {F : functor C D}
+    (T_C : Terminal C) (T_D : Terminal D)
+    (F_pT : preserves_chosen_terminal T_C F)
+    (N_C : NNO T_C) (N_D : NNO T_D): UU
+    := is_z_isomorphism
+         (NNO_mor T_D N_D (iscontrpr1 (F_pT T_D) · #F (zeroNNO _ N_C)) (#F (sucNNO _ N_C))).
+
+End HomomorphismOfNNOs.
